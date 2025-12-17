@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<flow name="receiving-orders" doc:id="38184ec1-ec8f-4ea6-963e-03a0bd6043c9" >
+		<logger level="INFO" doc:name=" Receiving orders" doc:id="1a491e86-d097-4872-8585-0d36bbf563e8" message="[orders-process-main] - Receiving orders from topic kafka" />
+	</flow>
+</mule>
