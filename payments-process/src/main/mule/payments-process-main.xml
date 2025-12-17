@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<flow name="receiving-payment-rules" doc:id="e8359f08-f852-4675-82de-7d694c0c8daf" >
+		<logger level="INFO" doc:name=" Receiving payment rules" doc:id="7b7c5581-0020-4afc-aee5-8219ec6f30e3" message="[payments-process-main] - Receiving payment rules from topic kafka" />
+	</flow>
+</mule>
