@@ -124,16 +124,7 @@ output application/json
         </error-handler>
     </flow>
     <flow name="get:\customers:customers-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  errorMessage: "Customer Not Found"
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+		<flow-ref doc:name="get-customers" doc:id="c2cce043-050e-4999-ab31-e0f8fec6f3e4" name="get-customers"/>
     </flow>
     <flow name="get:\customers\(document):customers-config">
         <ee:transform doc:name="Transform Message">

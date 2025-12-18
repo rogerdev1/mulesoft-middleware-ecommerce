@@ -1,0 +1,9 @@
+%dw 2.0
+
+type auto_048a0479_472e_4bc5_aabe_05a10b3f9a8f_Output_Payload = Array<{  birthdate: String | String,   address: Array<{    number: Number,     country: String,     city: String,     street: String,     postalcode?: String,     neighborhood: String,     state: String,     complement: String | Null,     _?: Any  }>, 
+  document: String, 
+  name: String, 
+  id: Number, 
+  _?: Any
+}>
+

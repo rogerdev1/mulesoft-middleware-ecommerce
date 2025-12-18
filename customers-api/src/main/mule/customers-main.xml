@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<db:config name="postgres_ecommerce" doc:name="Database Config" doc:id="7926cad1-7b14-45e3-b216-52ce6bfcc72d" >
+		<db:generic-connection url="jdbc:postgresql://localhost:5432/ecommerce" driverClassName="org.postgresql.Driver" user="postgres" password="password" />
+	</db:config>
+	<flow name="get-customers" doc:id="048a0479-472e-4bc5-aabe-05a10b3f9a8f" >
+		<ee:transform doc:name="Set params" doc:id="08c0e4cb-4133-4526-9ef3-9002e0c9363f" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="params" ><![CDATA[%dw 2.0
+output application/java
+var params = attributes.queryParams
+var query = "SELECT * FROM CUSTOMERS"
+fun queryByParam() = if(!isEmpty(params.document)) query ++ " WHERE DOCUMENT = '" ++ params.document as String ++ "'"
+					 else if(!isEmpty(params.id))  query ++ ' WHERE ID = ' ++ params.id as String
+					 else query
+---
+{
+	document: params.document,
+	id: params.id,
+	query: queryByParam()
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="[DEBUG] Parameters" doc:id="a2e8409d-062c-493f-91eb-791bc65c75ea" message="#[vars.params]"/>
+		<db:select doc:id="9af89b45-2918-4d9d-ad03-d527ecc579c5" doc:name="Get Customers" config-ref="postgres_ecommerce">
+			<db:sql ><![CDATA[#[vars.params.query]]]></db:sql>
+		</db:select>
+		<validation:validate-size doc:id="83b22245-3c30-46e7-88c7-0ddc09c11de0" value="#[payload]" min="1" message="Customer not found">
+			<error-mapping sourceType="VALIDATION:INVALID_SIZE" targetType="APP:NOT_FOUND" />
+		</validation:validate-size>
+		<ee:transform doc:name="Payload to JSON" doc:id="70a11454-9d55-49ce-b97e-8b25e5ff379a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="7f07fd82-c63f-4b07-9a57-df3c26a06bfc" message="#[payload]"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="e0fbe55e-9e70-4a9d-aea1-4caab89e616f" type="ANY">
+				<logger level="ERROR" doc:name="Not found" doc:id="08bbb8a8-ff0d-4d18-987c-bf4bedcb467d" message='#["Customer not found"]' />
+				<set-variable value="404" doc:name="Set httpStatus" doc:id="35e4aa0e-2c89-488e-b57c-a58261ff27b5" variableName="httpStatus" />
+				<ee:transform doc:name="Payload to JSON" doc:id="fa962809-537e-4fd7-aedb-8ec97adcd448">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Customer not found"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
