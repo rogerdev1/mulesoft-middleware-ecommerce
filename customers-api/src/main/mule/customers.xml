@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
     <http:listener-config name="customers-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8081" />
+        <http:listener-connection host="0.0.0.0" port="${http.port}" />
     </http:listener-config>
-    <apikit:config name="customers-config" api="resource::4e3519ed-0ee8-4fd9-8cff-5fd4698845fb:customers:1.0.0:raml:zip:customers.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="customers-config" api="customers.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <flow name="customers-main">
         <http:listener config-ref="customers-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
@@ -124,73 +124,18 @@ output application/json
         </error-handler>
     </flow>
     <flow name="get:\customers:customers-config">
-		<flow-ref doc:name="get-customers" doc:id="c2cce043-050e-4999-ab31-e0f8fec6f3e4" name="get-customers"/>
-    </flow>
-    <flow name="get:\customers\(document):customers-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="document">attributes.uriParams.'document'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  id: 1,
-  name: "FULANO DE TAL",
-  document: "00100100101",
-  birthdate: "1980-03-03",
-  address: [
-    {
-      street: "RUA NOVE",
-      number: 10,
-      complement: "SEM COMPLEMENTO",
-      neighborhood: "INDEPENDÊNCIA",
-      postalcode: "91000000",
-      city: "NOVA ERA",
-      state: "UF",
-      country: "BRASIL"
-    }
-  ]
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-    </flow>
-    <flow name="get:\customers\(id):customers-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:variables>
-                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
-            </ee:variables>
-        </ee:transform>
-        <logger level="INFO" message="get:\customers\(id):customers-config" />
+        <flow-ref doc:name="get-customers" doc:id="b66ed7e9-561f-414e-b89e-c27daeebf967" name="get-customers" />
     </flow>
     <flow name="post:\customers:application\json:customers-config">
-        <ee:transform doc:name="Transform Message">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-  id: 1,
-  name: "FULANO DE TAL",
-  document: "00100100101",
-  birthdate: "1980-03-03",
-  address: [
-    {
-      street: "RUA NOVE",
-      number: 10,
-      complement: "SEM COMPLEMENTO",
-      neighborhood: "INDEPENDÊNCIA",
-      postalcode: "91000000",
-      city: "NOVA ERA",
-      state: "UF",
-      country: "BRASIL"
-    }
-  ]
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+        <flow-ref doc:name="upsert-customer" doc:id="043effd8-146e-4083-9ee1-ddb938682d8e" name="upsert-customer" />
+    </flow>
+    <flow name="get:\customers\(id):customers-config">
+        <flow-ref doc:name="get-customer-by-id" doc:id="e0f230be-dd3d-47b5-bc36-ab10d0908290" name="get-customer-by-id" />
+    </flow>
+    <flow name="put:\customers\(id):application\json:customers-config">
+        <flow-ref doc:name="put-customer-by-id" doc:id="56f13f47-3b3b-4530-be99-d0adf3992f1f" name="put-customer-by-id" />
+    </flow>
+    <flow name="delete:\customers\(id):application\json:customers-config">
+        <flow-ref doc:name="delete-customer-by-id" doc:id="8c45798d-ac56-40a2-88c3-b57dea2c69f5" name="delete-customer-by-id" />
     </flow>
 </mule>

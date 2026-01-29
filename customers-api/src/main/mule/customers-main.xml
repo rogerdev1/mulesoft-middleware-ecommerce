@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns:db="http://www.mulesoft.org/schema/mule/db"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
 	<db:config name="postgres_ecommerce" doc:name="Database Config" doc:id="7926cad1-7b14-45e3-b216-52ce6bfcc72d" >
-		<db:generic-connection url="jdbc:postgresql://localhost:5432/ecommerce" driverClassName="org.postgresql.Driver" user="postgres" password="password" />
+		<db:generic-connection url="jdbc:postgresql://${postgres.host}:${postgres.port}/${postgres.database}" driverClassName="org.postgresql.Driver" user="${postgres.username}" password="${postgres.password}" />
 	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="78426ea5-db1d-4a58-bb5f-25afe47c33af" file="env/${env}.yaml" />
+	<global-property doc:name="Global Property" doc:id="be9d0b7f-cd30-4ef8-8369-21adc103816c" name="env" value="params" />
 	<flow name="get-customers" doc:id="048a0479-472e-4bc5-aabe-05a10b3f9a8f" >
 		<ee:transform doc:name="Set params" doc:id="08c0e4cb-4133-4526-9ef3-9002e0c9363f" >
 			<ee:message >
@@ -16,24 +19,27 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 			<ee:variables >
 				<ee:set-variable variableName="params" ><![CDATA[%dw 2.0
 output application/java
-var params = attributes.queryParams
-var query = "SELECT * FROM CUSTOMERS"
-fun queryByParam() = if(!isEmpty(params.document)) query ++ " WHERE DOCUMENT = '" ++ params.document as String ++ "'"
-					 else if(!isEmpty(params.id))  query ++ ' WHERE ID = ' ++ params.id as String
+var params   = attributes.queryParams
+var document = params.document default vars.document
+var id       = params.id default vars.id
+var query    = "SELECT * FROM CUSTOMERS"
+fun queryByParam() = if(!isEmpty(document)) query ++ " WHERE DOCUMENT = '" ++ document as String ++ "'"
+					 else if(!isEmpty(id))  query ++ ' WHERE ID = ' ++ id as String
 					 else query
 ---
 {
-	document: params.document,
-	id: params.id,
+	document: document,
+	id: id,
 	query: queryByParam()
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<logger level="INFO" doc:name="Getting customers" doc:id="dbb5672c-729a-44ea-b4b1-93f9eda90811" message="Getting customers from DB" />
 		<logger level="INFO" doc:name="[DEBUG] Parameters" doc:id="a2e8409d-062c-493f-91eb-791bc65c75ea" message="#[vars.params]"/>
 		<db:select doc:id="9af89b45-2918-4d9d-ad03-d527ecc579c5" doc:name="Get Customers" config-ref="postgres_ecommerce">
 			<db:sql ><![CDATA[#[vars.params.query]]]></db:sql>
 		</db:select>
-		<validation:validate-size doc:id="83b22245-3c30-46e7-88c7-0ddc09c11de0" value="#[payload]" min="1" message="Customer not found">
+		<validation:validate-size doc:id="83b22245-3c30-46e7-88c7-0ddc09c11de0" value="#[payload]" min="1" message="Customer not found" doc:name="There are customers?">
 			<error-mapping sourceType="VALIDATION:INVALID_SIZE" targetType="APP:NOT_FOUND" />
 		</validation:validate-size>
 		<ee:transform doc:name="Payload to JSON" doc:id="70a11454-9d55-49ce-b97e-8b25e5ff379a" >
@@ -44,9 +50,8 @@ output application/json
 payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="7f07fd82-c63f-4b07-9a57-df3c26a06bfc" message="#[payload]"/>
 		<error-handler >
-			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="e0fbe55e-9e70-4a9d-aea1-4caab89e616f" type="ANY">
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="e0fbe55e-9e70-4a9d-aea1-4caab89e616f" type="ANY">
 				<logger level="ERROR" doc:name="Not found" doc:id="08bbb8a8-ff0d-4d18-987c-bf4bedcb467d" message='#["Customer not found"]' />
 				<set-variable value="404" doc:name="Set httpStatus" doc:id="35e4aa0e-2c89-488e-b57c-a58261ff27b5" variableName="httpStatus" />
 				<ee:transform doc:name="Payload to JSON" doc:id="fa962809-537e-4fd7-aedb-8ec97adcd448">
@@ -55,11 +60,115 @@ payload]]></ee:set-payload>
 output application/json
 ---
 {
-    message: "Customer not found"
+    errorMessage: "Customer not found"
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
 			</on-error-continue>
 		</error-handler>
+	</flow>
+	<flow name="post-customer" doc:id="4e80e340-c840-48b1-ac8d-5a4ac9166099" >
+		<logger level="INFO" doc:name="Saving customer" doc:id="130291c3-dcc1-4129-8049-052072596251" message="Saving customer by document #[payload.document] in DB"/>
+		<db:insert doc:name="Insert Customer" doc:id="fca74493-21cb-4b13-92bc-f54926e7acd1" config-ref="postgres_ecommerce" autoGenerateKeys="true" autoGeneratedKeysColumnNames="#[['id']]">
+			<db:sql ><![CDATA[INSERT INTO CUSTOMERS( 
+	name,  document,  birthdate,  street,  number,  complement,  neighborhood,  postalcode,  city,  state,  country)
+VALUES(
+	:name,  :document,  :birthdate,  :street,  :number,  :complement,  :neighborhood,  :postalcode,  :city,  :state,  :country)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Payload to JSON" doc:id="46854885-4aba-4829-a388-f10cba4494b7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value='#[payload.generatedKeys["id"] as Number]' doc:name="Set customerId" doc:id="1fa1185f-0351-41ee-8c1a-cb281c27cd0f" variableName="customerId" />
+		<logger level="INFO" doc:name="[DEBUG] Response." doc:id="ddafcf69-4e32-4dc4-9d2f-139f9c471312" message="#[payload]"/>
+		<logger level="INFO" doc:name="Customer Created" doc:id="0064d51a-c52f-4a5e-99b2-8868215000a9" message='#["Customer with id $(vars.customerId as String) Created in DB"]' />
+		<set-payload value='#["customerId": vars.customerId]' doc:name="Set Payload" doc:id="2a0e8c77-a100-4279-bc6c-0764e4fa144b" mimeType="application/json"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c82df722-d9b6-4de9-ba2f-e7f83d0a25c8" type="ANY">
+				<logger level="ERROR" doc:name="Not found" doc:id="9ce18df4-da1c-42d7-8cd0-e2ee41aacc86" message='#["Customer not created"]' />
+				<set-variable value="400" doc:name="Set httpStatus" doc:id="421add6c-7715-465f-a64f-138622894a64" variableName="httpStatus" />
+				<ee:transform doc:name="Payload to JSON" doc:id="84ec58af-9459-405a-be9e-e68cc6e09099" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    errorMessage: "Customer not created"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	<flow name="upsert-customer" doc:id="363da6e4-f9ff-4c9c-8c6d-8deb568867b1" >
+		<set-variable value="#[payload.document]" doc:name="Set document" doc:id="84657e7c-cb51-45bb-989b-1c69e0895928" variableName="document"/>
+		<flow-ref doc:name="get-customers" doc:id="c70b0f2a-bb62-4a5d-9c10-1a57ed3ac1db" name="get-customers" target="getCustomerResponse"/>
+		<choice doc:name="Choice" doc:id="5490589d-dcda-4906-aba4-3dd7111ac244" >
+			<when expression='#[!isEmpty(vars.getCustomerResponse.errorMessage)]'>
+				<flow-ref doc:name="post-customer" doc:id="bb6b43ba-1bbc-407a-88b5-8ff15e4d3a39" name="post-customer" />
+			</when>
+			<otherwise>
+				<flow-ref doc:name="put-customer-by-id" doc:id="8858fbe2-b887-4069-8a7a-c35227d2c48a" name="put-customer-by-id" />
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="get-customer-by-id" doc:id="1844d0a9-1278-42bb-8dde-af652a33b249">
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Set id" doc:id="d3af1f52-19d7-491e-bedd-958ba19dcbe8" variableName="id" />
+		<logger level="INFO" doc:name="Getting customer" doc:id="aa499345-b27c-423b-8cb9-ea536e33e0e6" message="Getting customer by Id #[vars.id]" />
+		<db:query-single doc:name="Get Customer" doc:id="4a71348e-6c43-4307-b4fe-aeabcab5034e" config-ref="postgres_ecommerce" target="getCustomerByIdResponse">
+			<db:sql ><![CDATA[SELECT * FROM CUSTOMERS WHERE ID = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{id: vars.id}]]]></db:input-parameters>
+		</db:query-single>
+		<set-payload value="#[%dw 2.0 output application/json --- vars.getCustomerByIdResponse]" doc:name="Set Payload" doc:id="33667e6f-e723-46e5-b1d0-a6d050665235" mimeType="application/json"/>
+		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="689d243e-503a-4337-a2ee-1f07451bb338" message="#[payload]" />
+	</flow>
+	<flow name="put-customer-by-id" doc:id="2c69bed6-4f78-4c83-969e-7814ea19cde1" >
+		<logger level="INFO" doc:name="[DEBUG] Request" doc:id="8067c5ab-ce3d-4c8e-989b-a15a879558f2" message="#[payload default vars.getCustomerResponse[0]]"/>
+		<set-variable value="#[%dw 2.0 output application/java --- attributes.uriParams.id default vars.getCustomerResponse[0].id]" doc:name="Set id" doc:id="41e000e6-6c71-4c00-a6f1-9d30f00956d2" variableName="id"/>
+		<logger level="INFO" doc:name="Updating customer" doc:id="f6da49a9-1ea9-4080-9597-d457ece186d5" message="Updating customer by Id #[vars.id]"/>
+		<ee:transform doc:name="Generate SQL" doc:id="caece259-7566-4697-b5f0-475f1a10233c">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="updateQuery" ><![CDATA[%dw 2.0
+output application/java
+
+var columns = payload mapObject {
+	"Query" : $$ ++ " =:" ++ $$
+} pluck $ joinBy ","
+
+---
+"UPDATE CUSTOMERS SET " ++ columns ++ " WHERE id = " ++ vars.id as String]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:update doc:name="Update Customer" doc:id="6343ff13-a325-4be0-aa46-136a4338a25e" config-ref="postgres_ecommerce" target="updateCustomerByIdResponse">
+			<db:sql ><![CDATA[#[vars.updateQuery]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[payload as Object default {}]]]></db:input-parameters>
+		</db:update>
+		<set-payload value='#[%dw 2.0 output application/json --- "customerId": vars.id]' doc:name="Set Payload" doc:id="afe2605e-beeb-4138-b78c-ae2abce88997" mimeType="application/json"/>
+		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="a9a6fdfb-96fe-4751-8f0c-9bbc1ce85c29" message="#[payload]" />
+		<logger level="INFO" doc:name="Customer Updated" doc:id="2da8cacd-6c84-4ff1-babe-17ff51ddce76" message='#[%dw 2.0 output application/json ---&#10;if(isEmpty(payload.affectedRows) or payload.affectedRows != 0) "Customer with document $(vars.id as String) Updated in DB"&#10;else "Customer with document $(vars.id as String) NOT Updated in Golden DB"]' />
+	</flow>
+	<flow name="delete-customer-by-id" doc:id="524a9003-4ad6-4054-b554-ac829b133d6d" >
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Set id" doc:id="bd885dc1-8cf8-48d2-bd10-f166802d5bb7" variableName="id"/>
+		<logger level="INFO" doc:name="Deleting customer by Id" doc:id="3f867247-8db7-4b39-81b2-bbc67b22c79a" message='#["Deleting customer by Id $(vars.id as String)"]'/>
+		<db:delete doc:name="Delete Customer" doc:id="883f8738-7322-4927-9b1c-0fd131696925" config-ref="postgres_ecommerce">
+			<db:sql ><![CDATA[DELETE FROM CUSTOMERS WHERE ID = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{id: vars.id}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform doc:name="Payload to JSON" doc:id="cc2250ad-33ce-450c-940d-b4e2beede3d4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Customer Deleted" doc:id="dd974967-8655-4221-8dfc-8630da12f339" message='#["Customer with Id $(vars.id as String) deleted"]'/>
 	</flow>
 </mule>
