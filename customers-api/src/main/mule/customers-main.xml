@@ -51,19 +51,55 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 		<error-handler >
-			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="e0fbe55e-9e70-4a9d-aea1-4caab89e616f" type="ANY">
-				<logger level="ERROR" doc:name="Not found" doc:id="08bbb8a8-ff0d-4d18-987c-bf4bedcb467d" message='#["Customer not found"]' />
-				<set-variable value="404" doc:name="Set httpStatus" doc:id="35e4aa0e-2c89-488e-b57c-a58261ff27b5" variableName="httpStatus" />
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="e0fbe55e-9e70-4a9d-aea1-4caab89e616f" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, STREAM_MAXIMUM_SIZE_EXCEEDED">
+				<logger level="ERROR" doc:name="Error Getting Customer" doc:id="08bbb8a8-ff0d-4d18-987c-bf4bedcb467d" message="#[output application/json&#10;var param = vars.params.document default vars.params.id&#10;--- &quot;Error Getting Customer $(param default '') in BD&quot;]" />
 				<ee:transform doc:name="Payload to JSON" doc:id="fa962809-537e-4fd7-aedb-8ec97adcd448">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
+import java!db_postgres::PostgresDatabase
 output application/json
+var errorType = error.errorType.identifier
+var errorMessage = "$(error.errorType.identifier): $(error.detailedDescription)"
 ---
 {
-    errorMessage: "Customer not found"
+    errorMessage: errorMessage,
+    statusCode: PostgresDatabase::errorHandler(errorType),
+    
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+				<set-variable value="#[payload.statusCode]" doc:name="Set httpStatus" doc:id="35e4aa0e-2c89-488e-b57c-a58261ff27b5" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="6735263c-d522-4f79-85b7-2ec506c4c9f3" type="VALIDATION:INVALID_SIZE" >
+				<logger level="ERROR" doc:name="Not found" doc:id="0fdd40a2-a885-4e7a-8405-b016f316190c" message='#["Customer not found"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="5acbd570-982e-4346-a261-cb7c72edeb89" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    errorMessage: "Customer not found",
+    statusCode: 404
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="404" doc:name="Set httpStatus" doc:id="a347d0b4-9dca-49e0-907f-20e43aa1d167" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="17c3097b-0046-46ed-96db-3bd5290531f9" type="EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Error Getting Customer" doc:id="9e9a56bf-0512-423b-9011-b894b6891a87" message="#[output application/json&#10;var param = vars.params.document default vars.params.id&#10;--- &quot;Error Getting Customer $(param default '') in BD&quot;]" />
+				<ee:transform doc:name="Payload to JSON" doc:id="4b7be3fe-afb9-4382-9394-9629e0ab4d0e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errorMessage = error.detailedDescription
+---
+{
+    errorMessage: errorMessage,
+    statusCode: 500
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="404" doc:name="Set httpStatus" doc:id="9ccc63b8-c556-49aa-8511-1035dad668ae" variableName="httpStatus" />
 			</on-error-continue>
 		</error-handler>
 	</flow>
@@ -86,22 +122,42 @@ payload]]></ee:set-payload>
 		</ee:transform>
 		<set-variable value='#[payload.generatedKeys["id"] as Number]' doc:name="Set customerId" doc:id="1fa1185f-0351-41ee-8c1a-cb281c27cd0f" variableName="customerId" />
 		<logger level="INFO" doc:name="[DEBUG] Response." doc:id="ddafcf69-4e32-4dc4-9d2f-139f9c471312" message="#[payload]"/>
-		<logger level="INFO" doc:name="Customer Created" doc:id="0064d51a-c52f-4a5e-99b2-8868215000a9" message='#["Customer with id $(vars.customerId as String) Created in DB"]' />
+		<logger level="INFO" doc:name="Customer Created" doc:id="0064d51a-c52f-4a5e-99b2-8868215000a9" message='#["Customer $(vars.document as String) created with id $(vars.customerId as String) in DB"]' />
 		<set-payload value='#["customerId": vars.customerId]' doc:name="Set Payload" doc:id="2a0e8c77-a100-4279-bc6c-0764e4fa144b" mimeType="application/json"/>
 		<error-handler >
-			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c82df722-d9b6-4de9-ba2f-e7f83d0a25c8" type="ANY">
-				<logger level="ERROR" doc:name="Not found" doc:id="9ce18df4-da1c-42d7-8cd0-e2ee41aacc86" message='#["Customer not created"]' />
-				<set-variable value="400" doc:name="Set httpStatus" doc:id="421add6c-7715-465f-a64f-138622894a64" variableName="httpStatus" />
-				<ee:transform doc:name="Payload to JSON" doc:id="84ec58af-9459-405a-be9e-e68cc6e09099" >
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="0e5657d6-7056-41bf-be23-fa3ffd3398bc" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Not created" doc:id="f00fba13-0747-4045-9b6c-2b2333a80dfa" message='#["Error creating Customer $(vars.document as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="4727e0f9-3a52-4498-8fc4-ed95b82d6e1a" >
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
+import java!db_postgres::PostgresDatabase
 output application/json
+var errorType = error.errorType.identifier
+var errorMessage = "$(error.errorType.identifier): $(error.detailedDescription)"
 ---
 {
-    errorMessage: "Customer not created"
+    errorMessage: errorMessage,
+    statusCode: PostgresDatabase::errorHandler(errorType)
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+				<set-variable value="#[payload.statusCode]" doc:name="Set httpStatus" doc:id="7ce77a81-ec97-475a-a688-3d6086389f49" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="2c7bdda3-8ddf-40d8-ba1b-a6f2a1110226" type="EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Error Creating Customer" doc:id="e5b2345a-f1cb-4d33-89e4-abc4c1e36bc2" message='#["Error Creating Customer $(vars.document as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="e311c34a-760e-4cb9-9182-68b7ab2d7322">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var errorMessage = error.detailedDescription
+---
+{
+    errorMessage: errorMessage,
+    statusCode: 500
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="500" doc:name="Set httpStatus" doc:id="05029a1a-4e9c-458d-b4ff-60e2e7fd8416" variableName="httpStatus" />
 			</on-error-continue>
 		</error-handler>
 	</flow>
@@ -126,6 +182,42 @@ output application/json
 		</db:query-single>
 		<set-payload value="#[%dw 2.0 output application/json --- vars.getCustomerByIdResponse]" doc:name="Set Payload" doc:id="33667e6f-e723-46e5-b1d0-a6d050665235" mimeType="application/json"/>
 		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="689d243e-503a-4337-a2ee-1f07451bb338" message="#[payload]" />
+		<error-handler >
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="ea1513d2-8e9f-4aae-9748-dc686fe033eb" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Not gotten" doc:id="6cc0e19b-b6fb-43bf-ad78-d2cf4057941a" message='#["Error getting Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="2b8640b5-8217-448c-b325-b50f64dcc0c3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import java!db_postgres::PostgresDatabase
+output application/json
+var errorType = error.errorType.identifier
+var errorMessage = "$(error.errorType.identifier): $(error.detailedDescription)"
+---
+{
+    errorMessage: errorMessage,
+    statusCode: PostgresDatabase::errorHandler(errorType)
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="#[payload.statusCode]" doc:name="Set httpStatus" doc:id="d7dbf45b-e575-430d-bee8-bc3815310af6" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue1" doc:id="a58e1f85-3bff-4f48-8f29-52e5c287abe3" type="EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Error getting Customer" doc:id="ce641bbf-f776-4959-8f36-4fa94e131a95" message='#["Error getting Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="28a9e7bb-bfd2-4ec9-9c84-0f7d9a8f75d8" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errorMessage = error.detailedDescription
+---
+{
+    errorMessage: errorMessage,
+    statusCode: 500
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="500" doc:name="Set httpStatus" doc:id="006c4faa-7a54-4b3a-9162-2d7e43ecf2f7" variableName="httpStatus" />
+			</on-error-continue>
+		</error-handler>
 	</flow>
 	<flow name="put-customer-by-id" doc:id="2c69bed6-4f78-4c83-969e-7814ea19cde1" >
 		<logger level="INFO" doc:name="[DEBUG] Request" doc:id="8067c5ab-ce3d-4c8e-989b-a15a879558f2" message="#[payload default vars.getCustomerResponse[0]]"/>
@@ -153,6 +245,42 @@ var columns = payload mapObject {
 		<set-payload value='#[%dw 2.0 output application/json --- "customerId": vars.id]' doc:name="Set Payload" doc:id="afe2605e-beeb-4138-b78c-ae2abce88997" mimeType="application/json"/>
 		<logger level="INFO" doc:name="[DEBUG] Response" doc:id="a9a6fdfb-96fe-4751-8f0c-9bbc1ce85c29" message="#[payload]" />
 		<logger level="INFO" doc:name="Customer Updated" doc:id="2da8cacd-6c84-4ff1-babe-17ff51ddce76" message='#[%dw 2.0 output application/json ---&#10;if(isEmpty(payload.affectedRows) or payload.affectedRows != 0) "Customer with document $(vars.id as String) Updated in DB"&#10;else "Customer with document $(vars.id as String) NOT Updated in Golden DB"]' />
+		<error-handler >
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="b92ec13f-2fc7-43b9-868e-5c7d981429e2" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Not Updated" doc:id="b5c16212-206b-4570-9cfe-a63c3257e11a" message='#["Error Updating Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="c4ce18ff-fafc-4b92-8bcc-6110aac4b38e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import java!db_postgres::PostgresDatabase
+output application/json
+var errorType = error.errorType.identifier
+var errorMessage = "$(error.errorType.identifier): $(error.detailedDescription)"
+---
+{
+    errorMessage: errorMessage,
+    statusCode: PostgresDatabase::errorHandler(errorType)
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="#[payload.statusCode]" doc:name="Set httpStatus" doc:id="cd76dd05-db39-4dab-bfc2-1f658e2884d3" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue1" doc:id="dffac173-a5b6-4c31-bcbf-8b93f158fcbc" type="EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Error Updating Customer" doc:id="4e79851f-9025-4bc2-a641-8b83d5939eb9" message='#["Error Updating Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="24a52415-3ded-4ecb-8922-87c46c5a64b9" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errorMessage = error.detailedDescription
+---
+{
+    errorMessage: errorMessage,
+    statusCode: 500
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="500" doc:name="Set httpStatus" doc:id="092ed9db-3980-43f1-8c79-acbdeb8d7601" variableName="httpStatus" />
+			</on-error-continue>
+		</error-handler>
 	</flow>
 	<flow name="delete-customer-by-id" doc:id="524a9003-4ad6-4054-b554-ac829b133d6d" >
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Set id" doc:id="bd885dc1-8cf8-48d2-bd10-f166802d5bb7" variableName="id"/>
@@ -170,5 +298,41 @@ payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 		<logger level="INFO" doc:name="Customer Deleted" doc:id="dd974967-8655-4221-8dfc-8630da12f339" message='#["Customer with Id $(vars.id as String) deleted"]'/>
+		<error-handler >
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="89762626-4da7-4857-804d-c23d76696be0" type="DB:BAD_SQL_SYNTAX, DB:CONNECTIVITY, DB:QUERY_EXECUTION, DB:RETRY_EXHAUSTED, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Not deleted" doc:id="027e24ec-a509-4322-954e-9537be5177af" message='#["Error deleting Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="af0b65b0-8410-45bf-935d-0b22e2343d73" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import java!db_postgres::PostgresDatabase
+output application/json
+var errorType = error.errorType.identifier
+var errorMessage = "$(error.errorType.identifier): $(error.detailedDescription)"
+---
+{
+    errorMessage: errorMessage,
+    statusCode: PostgresDatabase::errorHandler(errorType)
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="#[payload.statusCode]" doc:name="Set httpStatus" doc:id="d9761df5-26e7-4e8d-86f8-7c926c9b9370" variableName="httpStatus" />
+			</on-error-continue>
+			<on-error-continue enableNotifications="false" logException="false" doc:name="On Error Continue" doc:id="766c6770-0bd6-4fd8-ab43-c1b5128b8342" type="EXPRESSION, STREAM_MAXIMUM_SIZE_EXCEEDED" >
+				<logger level="ERROR" doc:name="Error Deleting Customer" doc:id="da4a2642-8b66-4eb1-bc07-765498686e39" message='#["Error Deleting Customer $(vars.id as String) in BD"]' />
+				<ee:transform doc:name="Payload to JSON" doc:id="0180ce8d-b082-4286-8f85-4af14a6fea33" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var errorMessage = error.detailedDescription
+---
+{
+    errorMessage: errorMessage,
+    statusCode: 500
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="500" doc:name="Set httpStatus" doc:id="01d26407-9c45-40f0-9b15-0b6e59eb745f" variableName="httpStatus" />
+			</on-error-continue>
+		</error-handler>
 	</flow>
 </mule>
