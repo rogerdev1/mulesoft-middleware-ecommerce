@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="customers-main-suite.xml" />
+	<munit:test name="get-customers-test" doc:id="5a3bad87-d46e-419e-b57d-499c028a2479" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="daaf7eeb-f8ab-4cf9-970b-66ec6bf54d7e" >
+				<munit:payload value="#[readUrl('classpath://getcustomerstest\set-event_payload.dwl')]" encoding="UTF-8" />
+				<munit:attributes value="#[readUrl('classpath://getcustomerstest\set-event_attributes.dwl')]" />
+				<munit:variables >
+					<munit:variable key="outboundHeaders" value="#[readUrl('classpath://getcustomerstest\set-event_variable_.dwl')]" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to get-customers" doc:id="12f8fb94-315a-4c35-9453-c7f6caa0c2fe" name="get-customers"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="6719c1f8-7213-466b-9d68-b1bcffa75c7f" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import getcustomerstest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="post-customer-test" doc:id="cc897017-76a2-4b97-8971-e2213410b2d6" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="3d01df36-72cd-4689-b89b-d728e657ddff" >
+				<munit:payload value="#[output application/json --- readUrl('classpath://postcustomertest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				<munit:attributes value="#[readUrl('classpath://postcustomertest\set-event_attributes.dwl')]" />
+				<munit:variables >
+					<munit:variable key="getCustomerResponse" value="#[output application/json --- readUrl('classpath://postcustomertest\set-event_variable_.dwl')]" encoding="UTF-8" mediaType="application/json" />
+					<munit:variable key="outboundHeaders" value="#[readUrl('classpath://postcustomertest\set-event_variable_1.dwl')]" />
+					<munit:variable key="document" value="#[output application/json --- readUrl('classpath://postcustomertest\set-event_variable_2.dwl')]" encoding="UTF-8" mediaType="application/json" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to post-customer" doc:id="a9e24c21-b354-4f37-a452-99ac658da8d8" name="post-customer"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="281340ed-b918-4beb-8a60-b0542b97e57e" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import postcustomertest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
