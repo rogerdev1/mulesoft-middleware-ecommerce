@@ -5,5 +5,15 @@ type auto_048a0479_472e_4bc5_aabe_05a10b3f9a8f_Output_Payload = Array<{  birthda
   name: String, 
   id: Number, 
   _?: Any
-}>
+}> | anonymousType_1
+type anonymousType_1 = {
+  birthdate: String | String, 
+  address: Array<{    number: Number,     country: String,     city: String,     street: String,     postalcode?: String,     neighborhood: String,     state: String,     complement: String | Null,     _?: Any  }>, 
+  document: String, 
+  name: String, 
+  id: Number, 
+  _?: Any
+}
+
+
 

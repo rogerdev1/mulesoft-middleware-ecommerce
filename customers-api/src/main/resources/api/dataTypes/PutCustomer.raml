@@ -1,0 +1,22 @@
+#%RAML 1.0 DataType
+
+type: object
+properties:
+  name?: string
+  document?: string
+  birthdate?: date-only | string
+  address?:
+    type: array
+    items:
+      type: object
+      properties:
+        street?: 
+          type: string
+          maxLength: 60
+        number?: number
+        complement?: string | nil
+        neighborhood?: string
+        postalcode?: string
+        city?: string
+        state?: string
+        country?: string

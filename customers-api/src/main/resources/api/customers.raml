@@ -1,0 +1,111 @@
+#%RAML 1.0
+title: customers
+
+types:
+  GetCustomers: !include dataTypes/GetCustomers.raml
+  PostCustomer: !include dataTypes/PostCustomer.raml
+  PutCustomer: !include dataTypes/PutCustomer.raml
+
+
+
+/customers:
+  get:
+    queryParameters:
+      document?: string
+      id?: string
+    displayName: Get customers from DB
+    responses:
+      200:
+        body:
+          application/json:
+            type: GetCustomers[] | GetCustomers
+      400:
+          body:
+            application/json:
+              example: 
+                errorMessage: Bad Request
+      404:
+        body:
+          application/json:
+            example: 
+              errorMessage: Customer Not Found
+  /{id}:
+    get:
+      displayName: Get Customer from DB by Id
+      responses:
+        200:
+          body:
+            application/json:
+              type: GetCustomers
+              example: !include examples/CustomerResponseExample.raml
+        400:
+          body:
+            application/json:
+              example: 
+                errorMessage: Bad Request
+        404:
+          body:
+            application/json:
+              example: 
+                errorMessage: Customer Not Found
+    put:
+      displayName: Update Customer from DB by Id
+      body:
+        application/json:
+          type: PutCustomer
+          example: !include examples/CustomerResponseExample.raml
+      responses:
+        200:
+          body:
+            application/json:
+              type: GetCustomers
+              example: !include examples/CustomerResponseExample.raml
+        400:
+          body:
+            application/json:
+              example: 
+                errorMessage: Bad Request
+        404:
+          body:
+            application/json:
+              example:
+                errorMessage: Customer Not Found
+    delete:
+      displayName: Delete Customer from DB by Id
+      body:
+        application/json:
+          type: GetCustomers
+          example: !include examples/CustomerResponseExample.raml
+      responses:
+        204:
+          body:
+            application/json:
+              example: Customer Deleted
+        400:
+          body:
+            application/json:
+              example: 
+                errorMessage: Bad Request
+        404:
+          body:
+            application/json:
+              example:
+                errorMessage: Customer Not Found
+  post:
+    displayName: Create a new customer in DB
+    body:
+      application/json:
+        type: PostCustomer
+        example: !include examples/CustomerResponseExample.raml
+    responses:
+      201:
+        body:
+          application/json:
+            type: PostCustomer
+            example: !include examples/CustomerResponseExample.raml
+      400:
+        body:
+          application/json:
+            example: 
+              errorMessage: Bad Request
+      

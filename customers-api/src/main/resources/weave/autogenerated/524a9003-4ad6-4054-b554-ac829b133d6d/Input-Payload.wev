@@ -1,0 +1,11 @@
+%dw 2.0
+
+type auto_524a9003_4ad6_4054_b554_ac829b133d6d_Input_Payload = {
+  birthdate: String | String, 
+  address: Array<{    number: Number,     country: String,     city: String,     street: String,     postalcode?: String,     neighborhood: String,     state: String,     complement: String | Null,     _?: Any  }>, 
+  document: String, 
+  name: String, 
+  id: Number, 
+  _?: Any
+}
+
